@@ -6,7 +6,6 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "npm run build && node dist/index",
-    "build": "tsc",
     "dev": "nodemon src/index"
   },
   "keywords": [],
