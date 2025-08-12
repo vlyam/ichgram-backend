@@ -41,13 +41,17 @@ export const register = async ({ email, fullname, username, password }) => {
     });
 
     // Формируем письмо с ссылкой для подтверждения email
+    const frontendUrl = process.env.FRONTEND_URL.endsWith('/')
+        ? process.env.FRONTEND_URL.slice(0, -1)
+        : process.env.FRONTEND_URL;
+
+    const verifyLink = `${frontendUrl}/verify?code=${verificationCode}`;
+
     const verifyEmail = {
         to: email,
         subject: "Please verify your email",
         html: `<p>Please click this link to verify your email:</p>
-           <a href="${process.env.FRONTEND_URL}/verify?code=${verificationCode}" target="_blank">
-             Verify Email
-           </a>`,
+           <a href="${verifyLink}" target="_blank">Verify Email</a>`,
     };
 
     // Отправляем письмо
