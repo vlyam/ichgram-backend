@@ -68,7 +68,7 @@ const startWebsocketServer = () => {
         });
     });
 
-    const port = process.env.WSPORT || 5001;
+    const port = process.env.PORT || 5001;
     httpServer.listen(port, () => {
         console.log(`Websocket server running on port ${port}`);
     });
