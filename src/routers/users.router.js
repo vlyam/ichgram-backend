@@ -2,6 +2,7 @@ import { Router } from "express";
 import multer from "multer";
 import {
   getUserProfileController,
+  deleteUserProfileController,
   updateUserProfileController,
   changePasswordController,
   searchUsersController,
@@ -16,6 +17,9 @@ const usersRouter = Router();
 
 // Получить профиль текущего пользователя
 usersRouter.get("/profile", authenticate, getUserProfileController);
+
+// Удалить профиль текущего пользователя
+usersRouter.delete("/profile", authenticate, deleteUserProfileController);
 
 // Обновить профиль текущего пользователя (с поддержкой загрузки изображения)
 usersRouter.patch("/profile", authenticate, upload.single("profile_image"), updateUserProfileController);

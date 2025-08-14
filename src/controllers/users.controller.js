@@ -1,6 +1,13 @@
 import bcrypt from "bcrypt";
 import User from "../db/User.js";
 import Follow from "../db/Follow.js";
+import Post from "../db/Post.js";
+import Like from "../db/Like.js";
+import Comment from "../db/Comment.js";
+import CommentLike from "../db/CommentLike.js";
+import Notification from "../db/Notification.js";
+import Conversation from "../db/Conversation.js";
+import Message from "../db/Message.js";
 import { getUserIdFromToken } from "../utils/getUserIdFromToken.js";
 import { passwordSchema } from "../validation/users.schema.js";
 
@@ -195,5 +202,53 @@ export const bulkController = async (req, res) => {
     res.json(orderedUsers);
   } catch (error) {
     res.status(500).json({ message: "Error in bulk users request", error: error.message });
+  }
+};
+
+
+// Удаление профиля текущего пользователя и всех связанных данных
+export const deleteUserProfileController = async (req, res) => {
+  try {
+    const userId = getUserIdFromToken(req);
+
+    console.log("Deleting user:", userId);
+
+    // 1. Удаляем все подписки
+    await Follow.deleteMany({ $or: [{ follower: userId }, { following: userId }] });
+
+    // 2. Находим все посты пользователя
+    const posts = await Post.find({ author: userId });
+    const postIds = posts.map(p => p._id);
+
+    // 3. Удаляем все лайки и комментарии на этих постах
+    await Like.deleteMany({ post: { $in: postIds } });
+    await CommentLike.deleteMany({ comment: { $in: await Comment.find({ post: { $in: postIds } }).distinct("_id") } });
+    await Comment.deleteMany({ post: { $in: postIds } });
+
+    // 4. Удаляем сами посты
+    await Post.deleteMany({ author: userId });
+
+    // 5. Удаляем все лайки и комментарии, которые пользователь оставил на чужих постах
+    await Like.deleteMany({ user: userId });
+    await Comment.deleteMany({ author: userId });
+    await CommentLike.deleteMany({ user: userId });
+
+    // 6. Удаляем уведомления пользователя (кто создал и кому приходили)
+    await Notification.deleteMany({ $or: [{ user: userId }, { to: userId }] });
+
+    // 7. Удаляем сообщения и разговоры пользователя
+    const conversations = await Conversation.find({ participants: userId });
+    const conversationIds = conversations.map(c => c._id);
+
+    await Message.deleteMany({ $or: [{ from: userId }, { to: userId }, { conversationId: { $in: conversationIds } }] });
+    await Conversation.deleteMany({ _id: { $in: conversationIds } });
+
+    // 8. Удаляем самого пользователя
+    await User.findByIdAndDelete(userId);
+
+    res.json({ message: "User and all related data deleted successfully" });
+  } catch (err) {
+    console.error("Error deleting user profile:", err);
+    res.status(500).json({ message: "Failed to delete user profile", error: err.message });
   }
 };

@@ -1,5 +1,6 @@
 import Comment from "../db/Comment.js";
 import Post from "../db/Post.js";
+import Like from "../db/Like.js";
 import Notification from "../db/Notification.js";
 
 // Создание нового комментария к посту
@@ -47,13 +48,26 @@ export const getCommentsByPost = async (req, res) => {
     try {
         const { postId } = req.params;
 
+        if (!postId) {
+            return res.status(400).json({ message: "PostId is required" });
+        }
+
+        // Получаем комментарии с автором
         const comments = await Comment.find({ post: postId })
             .populate("author", "username fullname profile_image")
             .sort({ createdAt: 1 });
 
-        res.json(comments);
+        // Добавляем количество лайков к каждому комментарию
+        const commentsWithLikes = await Promise.all(
+            comments.map(async (c) => {
+                const likesCount = await Like.countDocuments({ comment: c._id });
+                return { ...c.toObject(), likesCount };
+            })
+        );
+
+        res.json(commentsWithLikes);
     } catch (error) {
-        // Ошибка при получении комментариев
+        console.error("Error getting comments by post:", error);
         res.status(500).json({ message: "Failed to get comments" });
     }
 };
